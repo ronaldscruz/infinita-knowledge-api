@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    image: infinita-knowledge:dev
+    volumes:
+      - ..:/app:cached
+      - node_modules:/app/node_modules
+    working_dir: /app
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    environment:
+      - OPENAPI_KEY
+      - NODE_ENV=development
+    # Uncomment to use ptrace-based debuggers if needed later
+    # cap_add:
+    #   - SYS_PTRACE
+    # security_opt:
+    #   - seccomp:unconfined
+
+volumes:
+  node_modules:
