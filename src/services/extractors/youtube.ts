@@ -5,7 +5,7 @@ import { unlink } from "node:fs/promises";
 import type OpenAI from "openai";
 import { getOpenAiClient } from "../../lib/openAi.js";
 import { ensureDirectoryExists } from "../../utils/fs.js";
-import { resolveProjectRoot } from "../../utils/resolveProjectRoot.js";
+import { resolveProjectRoot } from "../../utils/fs.js";
 
 const execFileAsync = promisify(execFile);
 
