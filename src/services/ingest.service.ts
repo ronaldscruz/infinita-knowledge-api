@@ -1,9 +1,6 @@
-import path from "node:path";
-import { unlink } from "node:fs/promises";
-
-import { extractPdfText } from "../utils/extractPdfText.js";
-import { downloadYoutubeAudio } from "../lib/youtubeDownloader.js";
-import { transcriptAudio } from "../utils/transcriptAudio.js";
+import { extractPdfToText, pdfSourceName } from "./extractors/pdf.js";
+import { extractYoutubeToText } from "./extractors/youtube.js";
+import { extractPlainText } from "./extractors/text.js";
 import { chunkText } from "../utils/chunkText.js";
 import { embedChunks } from "./embeddings.service.js";
 import { upsertVectors } from "./pinecone.service.js";
@@ -17,24 +14,19 @@ export async function ingestFromSources(
 	const collected: Array<{ source: string; kind: string; text: string }> = [];
 
 	for (const pdfPath of uploadedPdfPaths) {
-		const text = await extractPdfText(pdfPath);
-		collected.push({ source: path.basename(pdfPath), kind: "pdf", text });
-		try {
-			await unlink(pdfPath);
-		} catch {}
+		const text = await extractPdfToText(pdfPath);
+		collected.push({ source: pdfSourceName(pdfPath), kind: "pdf", text });
 	}
 
 	for (const url of youtubeUrls) {
-		const { outputFilePath } = await downloadYoutubeAudio(url);
-		const text = await transcriptAudio(outputFilePath);
+		const { text } = await extractYoutubeToText(url);
 		collected.push({ source: url, kind: "youtube", text });
-		try {
-			await unlink(outputFilePath);
-		} catch {}
 	}
 
-	for (const t of rawTexts)
-		collected.push({ source: "raw", kind: "text", text: t });
+	for (const t of rawTexts) {
+		const text = await extractPlainText(t);
+		collected.push({ source: "raw", kind: "text", text });
+	}
 
 	const vectors: Array<{
 		id: string;

@@ -1,3 +1,3 @@
-export function extractPlainText(input: string): string {
+export async function extractPlainText(input: string): Promise<string> {
 	return input;
 }

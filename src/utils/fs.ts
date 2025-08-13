@@ -2,6 +2,7 @@ import path from "node:path";
 import os from "node:os";
 import { createWriteStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
+import fs from "node:fs/promises";
 
 export function tmpPath(filename: string): string {
 	return path.join(
@@ -24,3 +25,9 @@ export async function saveIncomingFile(
 		out.on("error", reject);
 	});
 }
+
+export const ensureDirectoryExists = async (
+	directoryPath: string,
+): Promise<void> => {
+	await fs.mkdir(directoryPath, { recursive: true });
+};
