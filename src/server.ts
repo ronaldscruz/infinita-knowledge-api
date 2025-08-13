@@ -43,30 +43,36 @@ app.get("/", (req, res) => {
 // POST /notebooks → ingest and upsert to single Pinecone index
 app.post("/notebooks", (req, res) => {
   console.log("🚀 Starting notebook ingestion process");
+  console.log("📋 Request headers:", req.headers);
   const bb = Busboy({ headers: req.headers, limits: { fileSize: 1 * 1024 * 1024 * 1024 } });
 
   const uploadedPdfPaths: string[] = [];
   const youtubeUrls: string[] = [];
   const rawTexts: string[] = [];
+  const filePromises: Array<Promise<void>> = [];
+  const fileErrors: string[] = [];
 
-  bb.on("file", async (_name: string, file: any, info: any) => {
+  bb.on("file", (name: string, file: any, info: any) => {
     const { filename, mimeType } = info;
-    console.log(`📁 Processing file: ${filename} (${mimeType})`);
-    try {
-      if (!filename.toLowerCase().endsWith(".pdf") && mimeType !== "application/pdf") {
-        console.log(`⚠️  Skipping non-PDF file: ${filename}`);
-        file.resume();
-        return;
+    console.log(`📁 Processing file field '${name}': ${filename} (${mimeType})`);
+    const p = (async () => {
+      try {
+        if (!filename.toLowerCase().endsWith(".pdf") && mimeType !== "application/pdf") {
+          console.log(`⚠️  Skipping non-PDF file: ${filename}`);
+          file.resume();
+          return;
+        }
+        console.log(`💾 Saving PDF file: ${filename}`);
+        const savedPath = await saveIncomingFile(file, filename);
+        uploadedPdfPaths.push(savedPath);
+        console.log(`✅ PDF file saved: ${savedPath}`);
+      } catch (err: any) {
+        console.error(`❌ Error processing PDF file ${filename}:`, err?.message ?? String(err));
+        fileErrors.push(err?.message ?? String(err));
+        try { file.resume(); } catch {}
       }
-      console.log(`💾 Saving PDF file: ${filename}`);
-      const savedPath = await saveIncomingFile(file, filename);
-      uploadedPdfPaths.push(savedPath);
-      console.log(`✅ PDF file saved: ${savedPath}`);
-    } catch (err: any) {
-      console.error(`❌ Error processing PDF file ${filename}:`, err.message);
-      file.resume();
-      res.status(400).json({ error: err.message ?? String(err) });
-    }
+    })();
+    filePromises.push(p);
   });
 
   bb.on("field", (name: string, value: string) => {
@@ -87,12 +93,17 @@ app.post("/notebooks", (req, res) => {
   });
 
   bb.on("finish", async () => {
+    // Ensure all file streams have finished saving before proceeding
+    try {
+      await Promise.allSettled(filePromises);
+    } catch {}
     console.log(`📊 Processing summary: ${uploadedPdfPaths.length} PDFs, ${youtubeUrls.length} YouTube URLs, ${rawTexts.length} text inputs`);
     
     try {
       if (uploadedPdfPaths.length === 0 && youtubeUrls.length === 0 && rawTexts.length === 0) {
         console.log("❌ No valid sources provided");
-        return res.status(400).json({ error: "no valid sources provided" });
+        const firstErr = fileErrors[0];
+        return res.status(400).json({ error: firstErr ?? "no valid sources provided" });
       }
 
       const collected: Array<{ source: string; kind: string; text: string }> = [];
@@ -304,7 +315,7 @@ app.get("/notebooks/query", async (req, res) => {
     let systemPrompt = "";
     let userPrompt = "";
     if (mode === "answer") {
-      systemPrompt = "Answer the user's question using only the provided context. If missing, say you don't know. Be concise but thorough.";
+      systemPrompt = "Ground all factual claims in the provided context. You may adapt, translate, and teach using the user's requested language or phonetics (e.g., Portuguese sound analogies), even if those didactic examples are not verbatim in the context. If the context lacks the factual information needed, say you don't know.";
       userPrompt = `Context:\n${context}\n\nQuestion: ${query}`;
     } else if (mode === "summary") {
       systemPrompt = "Write a clear, unbiased summary using only the provided context. Focus on key points, avoid speculation.";
