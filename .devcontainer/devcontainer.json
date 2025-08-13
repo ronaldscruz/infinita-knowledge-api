@@ -1,20 +1,16 @@
 {
-  "name": "infinita-knowledge",
-  "dockerComposeFile": ["docker-compose.yml"],
-  "service": "app",
-  "workspaceFolder": "/app",
-  "shutdownAction": "stopCompose",
-  "remoteEnv": {
-    "OPENAPI_KEY": "${localEnv:OPENAPI_KEY}"
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "dbaeumer.vscode-eslint"
-      ]
-    }
-  },
-  "postCreateCommand": "npm install && npm rebuild canvas --build-from-source"
+	"name": "infinita-knowledge",
+	"dockerComposeFile": ["docker-compose.yml"],
+	"service": "app",
+	"workspaceFolder": "/app",
+	"shutdownAction": "stopCompose",
+	"remoteEnv": {
+		"OPENAPI_KEY": "${localEnv:OPENAPI_KEY}"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": ["dbaeumer.vscode-eslint", "biomejs.biome"]
+		}
+	},
+	"postCreateCommand": "npm install && npm rebuild canvas --build-from-source"
 }
-
-

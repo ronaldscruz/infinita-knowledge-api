@@ -1,36 +1,37 @@
 {
-  "name": "infinita-knowledge",
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "run:ts": "tsx ./src/index.ts",
-    "dev": "tsc --watch",
-    "ci": "npm install",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "run:server": "tsx ./src/server.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@pinecone-database/pinecone": "^6.1.2",
-    "better-sqlite3": "^12.2.0",
-    "busboy": "^1.6.0",
-    "canvas": "^3.1.2",
-    "dotenv": "^16.4.5",
-    "express": "^5.1.0",
-    "openai": "^5.12.2",
-    "pdfjs-dist": "^5.4.54"
-  },
-  "type": "module",
-  "devDependencies": {
-    "@types/busboy": "^1.5.4",
-    "@types/express": "^5.0.3",
-    "@types/node": "^22.7.6",
-    "tsx": "^4.19.0",
-    "typescript": "^5.5.4"
-  }
+	"name": "infinita-knowledge",
+	"version": "1.0.0",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/index.js",
+		"run:ts": "tsx ./src/index.ts",
+		"dev": "tsc --watch",
+		"ci": "npm install",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"run:server": "tsx ./src/server.ts"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@pinecone-database/pinecone": "^6.1.2",
+		"better-sqlite3": "^12.2.0",
+		"busboy": "^1.6.0",
+		"canvas": "^3.1.2",
+		"dotenv": "^16.4.5",
+		"express": "^5.1.0",
+		"openai": "^5.12.2",
+		"pdfjs-dist": "^5.4.54"
+	},
+	"type": "module",
+	"devDependencies": {
+		"@biomejs/biome": "2.1.4",
+		"@types/busboy": "^1.5.4",
+		"@types/express": "^5.0.3",
+		"@types/node": "^22.7.6",
+		"tsx": "^4.19.0",
+		"typescript": "^5.5.4"
+	}
 }

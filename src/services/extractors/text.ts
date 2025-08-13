@@ -1,1 +1,3 @@
-export function extractPlainText(input: string): string { return input; }
+export function extractPlainText(input: string): string {
+	return input;
+}
