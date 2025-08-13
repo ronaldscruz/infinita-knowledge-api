@@ -1,0 +1,358 @@
+openapi: 3.0.3
+info:
+  title: Notebook Ingestion API
+  description: A minimal Express API for ingesting and managing notebooks with PDF, YouTube, and text content using Pinecone vector storage
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /:
+    get:
+      summary: Health check
+      description: Simple health check endpoint
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Server is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Hello World"
+
+  /notebooks:
+    post:
+      summary: Ingest notebook content
+      description: |
+        Ingest various types of content (PDF files, YouTube videos, raw text) and store them as vectors in Pinecone.
+        Supports multiple file uploads and batch processing.
+      operationId: ingestNotebooks
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: PDF files to process
+                youtube_url:
+                  type: string
+                  format: uri
+                  description: Single YouTube URL to process
+                youtube_urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  description: Multiple YouTube URLs to process
+                text:
+                  type: string
+                  description: Raw text content to process
+                raw_text:
+                  type: string
+                  description: Alternative field name for raw text content
+                raw_texts:
+                  type: array
+                  items:
+                    type: string
+                  description: Multiple raw text contents to process
+              anyOf:
+                - required: [file]
+                - required: [youtube_url]
+                - required: [youtube_urls]
+                - required: [text]
+                - required: [raw_text]
+                - required: [raw_texts]
+      responses:
+        '200':
+          description: Content successfully ingested and indexed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  upserted:
+                    type: integer
+                    description: Number of vectors created/updated
+                    example: 150
+        '400':
+          description: Bad request - invalid input or no valid sources provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "no valid sources provided"
+        '500':
+          description: Internal server error during processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to process PDF file"
+
+    get:
+      summary: List notebooks or get index statistics
+      description: |
+        Retrieve information about stored vectors. Attempts to list vectors if supported,
+        otherwise returns index statistics.
+      operationId: listNotebooks
+      responses:
+        '200':
+          description: Successfully retrieved notebook information
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      listed:
+                        type: object
+                        description: List of vectors from Pinecone
+                  - type: object
+                    properties:
+                      stats:
+                        type: object
+                        description: Index statistics from Pinecone
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to retrieve index information"
+
+    delete:
+      summary: Clear all notebooks
+      description: Remove all vectors from the Pinecone index
+      operationId: deleteAllNotebooks
+      responses:
+        '200':
+          description: All notebooks successfully deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '500':
+          description: Internal server error during deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to delete index contents"
+
+  /notebooks/query:
+    get:
+      summary: Query the knowledge base (answer, summary, overview, analysis, quiz)
+      description: |
+        Uses vector similarity search over Pinecone to retrieve relevant chunks and generates a response with GPT.
+        Supports multiple modes via the `mode` query parameter:
+        - `answer` (default): precise Q&A
+        - `summary`: concise bullet-summary
+        - `overview`: high-level overview
+        - `analysis`: structured analysis
+        - `quiz`: multiple-choice questions in JSON
+      operationId: queryNotebooks
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: The query string to search for or instruction (e.g., "summarize this video")
+          schema:
+            type: string
+            example: "What is machine learning?"
+        - name: mode
+          in: query
+          required: false
+          description: Response mode. If not provided, the server attempts to infer intent from `q`.
+          schema:
+            type: string
+            enum: [answer, summary, overview, analysis, quiz]
+            example: summary
+        - name: k
+          in: query
+          required: false
+          description: Number of nearest chunks to retrieve (defaults vary by mode; capped at 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 24
+      responses:
+        '200':
+          description: Successfully generated response and sources
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: Generic response for modes answer/summary/overview/analysis
+                    properties:
+                      mode:
+                        type: string
+                      answer:
+                        type: string
+                        description: Generated text based on retrieved context
+                        example: "Machine learning is a subset of artificial intelligence..."
+                      sources:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            source:
+                              type: string
+                              description: Source of the content chunk
+                              example: "document.pdf"
+                            kind:
+                              type: string
+                              description: Type of content
+                              example: "pdf"
+                            relevance_score:
+                              type: number
+                              description: Similarity score with the query
+                              example: 0.95
+                            chunk_index:
+                              type: integer
+                              description: Index of the chunk within the source
+                              example: 3
+                      query:
+                        type: string
+                      chunks_used:
+                        type: integer
+                      total_matches:
+                        type: integer
+                  - type: object
+                    description: Quiz response when mode=quiz
+                    properties:
+                      mode:
+                        type: string
+                        example: quiz
+                      quiz:
+                        type: object
+                        properties:
+                          questions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                question:
+                                  type: string
+                                options:
+                                  type: array
+                                  items:
+                                    type: string
+                                  minItems: 4
+                                  maxItems: 4
+                                answerIndex:
+                                  type: integer
+                                  minimum: 0
+                                  maximum: 3
+                                explanation:
+                                  type: string
+                      raw:
+                        type: string
+                        description: Raw model output if quiz JSON parsing failed
+                      sources:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            source:
+                              type: string
+                            kind:
+                              type: string
+                            relevance_score:
+                              type: number
+                            chunk_index:
+                              type: integer
+                      query:
+                        type: string
+                      chunks_used:
+                        type: integer
+                      total_matches:
+                        type: integer
+        '400':
+          description: Bad request - missing query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error during query processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error
+
+    Success:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          description: Success status
+      required:
+        - ok
+
+    IngestResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          description: Success status
+        upserted:
+          type: integer
+          description: Number of vectors created/updated
+      required:
+        - ok
+        - upserted
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Notebooks
+    description: Notebook ingestion and management operations

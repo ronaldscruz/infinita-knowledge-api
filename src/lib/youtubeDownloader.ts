@@ -56,8 +56,6 @@ export async function downloadYoutubeAudio(
     url,
   ], { maxBuffer: 10 * 1024 * 1024 });
 
-  const outputFilePath = path.join(destinationDir, `${videoId}.wav`);
+  const outputFilePath = path.join(destinationDir, `${videoId}.mp3`);
   return { outputFilePath, stdout, stderr };
 }
-
-downloadYoutubeAudio("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
